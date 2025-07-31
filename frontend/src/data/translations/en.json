@@ -1,0 +1,38 @@
+{
+  "navigation": {
+    "home": "Home",
+    "events": "Events",
+    "services": "Services",
+    "sellers": "Sellers",
+    "partners": "Partners",
+    "news": "News",
+    "about": "About",
+    "contacts": "Contacts",
+    "profile": "Profile"
+  },
+  "hero": {
+    "title": "Uzbekistan Sellers Association",
+    "subtitle": "Uniting e-commerce professionals",
+    "cta": "Become a Member"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "search": "Search",
+    "filter": "Filter",
+    "reset": "Reset"
+  },
+  "footer": {
+    "legal": {
+      "offer": "Terms of Service",
+      "privacy": "Privacy Policy",
+      "refund": "Refund Policy"
+    },
+    "copyright": "© 2024 Uzbekistan Sellers Association. All rights reserved."
+  }
+} 

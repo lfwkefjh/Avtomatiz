@@ -1,0 +1,122 @@
+@import '../styles/variables.css';
+
+/* Подключаем локальные шрифты */
+@font-face {
+  font-family: 'Franklin Gothic Demi';
+  src: url('/fornts/franklingothic_demi.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/fornts/Inter-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/fornts/Inter-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import '../styles/news-utils.css';
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --font-inter: 'Inter', system-ui, sans-serif;
+  --font-franklin: 'Franklin Gothic Demi', system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-feature-settings: "rlig" 1, "calt" 1;
+  font-family: var(--font-inter);
+}
+
+/* Класс для Franklin Gothic Demi */
+.font-franklin {
+  font-family: var(--font-franklin);
+}
+
+/* Стили для blend mode */
+.blend-lighten {
+  mix-blend-mode: lighten;
+}
+
+/* Glassmorphism эффекты */
+.glass-blur {
+  backdrop-filter: blur(50px);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.glass-dark {
+  backdrop-filter: blur(50px);
+  background: rgba(49, 48, 61, 0.6);
+}
+
+/* Дополнительные анимации */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(1, 132, 244, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(1, 132, 244, 0.6);
+  }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.animate-ripple {
+  animation: ripple 1.5s ease-out infinite;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
