@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { useRef } from 'react';
+import GradientButton from '@/components/ui/GradientButton';
+import AnimatedCounter from '@/components/ui/AnimatedCounter';
 
 interface Event {
   id: number;
@@ -33,6 +36,10 @@ const EventsSlider: React.FC<EventsSliderProps> = ({ locale }) => {
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   // Данные мероприятий
   const events: Event[] = [
@@ -132,17 +139,33 @@ const EventsSlider: React.FC<EventsSliderProps> = ({ locale }) => {
 
   // Автоматическое переключение слайдов
   useEffect(() => {
+    if (!isAutoPlaying) return;
+    
     const timer = setInterval(() => {
+      setSlideDirection('left');
+      setIsTransitioning(true);
       setCurrentSlide((prev) => (prev + 1) % events.length);
-    }, 5000); // Переключение каждые 5 секунд
+      
+      setTimeout(() => {
+        setIsTransitioning(false);
+        setSlideDirection(null);
+      }, 800);
+    }, 6000); // Переключение каждые 6 секунд
 
     return () => clearInterval(timer);
-  }, [events.length]);
+  }, [events.length, isAutoPlaying]);
+
+  // Остановка автопроигрывания при взаимодействии
+  const pauseAutoPlay = () => {
+    setIsAutoPlaying(false);
+    setTimeout(() => setIsAutoPlaying(true), 10000); // Возобновить через 10 сек
+  };
 
   // Обработчик клика по кружочкам
   const handleDotClick = (index: number) => {
     if (isTransitioning || index === currentSlide) return;
     
+    pauseAutoPlay();
     const direction = index > currentSlide ? 'left' : 'right';
     setSlideDirection(direction);
     setIsTransitioning(true);
@@ -151,13 +174,14 @@ const EventsSlider: React.FC<EventsSliderProps> = ({ locale }) => {
     setTimeout(() => {
       setIsTransitioning(false);
       setSlideDirection(null);
-    }, 600);
+    }, 800);
   };
 
   // Обработчики для кнопок навигации
   const handlePrevSlide = () => {
     if (isTransitioning) return;
     
+    pauseAutoPlay();
     setSlideDirection('right');
     setIsTransitioning(true);
     setCurrentSlide((prev) => (prev - 1 + events.length) % events.length);
@@ -165,12 +189,13 @@ const EventsSlider: React.FC<EventsSliderProps> = ({ locale }) => {
     setTimeout(() => {
       setIsTransitioning(false);
       setSlideDirection(null);
-    }, 600);
+    }, 800);
   };
 
   const handleNextSlide = () => {
     if (isTransitioning) return;
     
+    pauseAutoPlay();
     setSlideDirection('left');
     setIsTransitioning(true);
     setCurrentSlide((prev) => (prev + 1) % events.length);
@@ -178,7 +203,7 @@ const EventsSlider: React.FC<EventsSliderProps> = ({ locale }) => {
     setTimeout(() => {
       setIsTransitioning(false);
       setSlideDirection(null);
-    }, 600);
+    }, 800);
   };
 
   // Обработчики для свайпов
@@ -208,218 +233,473 @@ const EventsSlider: React.FC<EventsSliderProps> = ({ locale }) => {
     setTouchEnd(null);
   };
 
-  return (
-    <div className="absolute left-[121px] top-[2695px] w-[1681px] h-[897px]">
-      <div className="relative w-full h-full">
-        {/* Фон блока */}
-        <div className="absolute left-0 top-[151px] w-[1681px] h-[746px] bg-[rgba(25,21,52,0.85)] border border-[#2786CA] rounded-[20px]"></div>
-        
-        {/* Заголовок */}
-        <div className="absolute left-[1px] top-0 w-[561px] h-[27px]">
-          <h2 className="text-white text-[20px] leading-[24.2px] font-inter font-normal uppercase">Мероприятия</h2>
-        </div>
-        
-        {/* Линия */}
-        <div className="absolute left-[3px] top-[27.5px] w-[151.5px] h-[1px] bg-white"></div>
-        
-        {/* Подзаголовок */}
-        <div className="absolute left-0 top-[36px] w-[547px] h-[58px]">
-          <h1 className="text-white text-[40px] leading-[45.4px] font-franklin font-normal uppercase">Ближайшие мероприятия</h1>
-        </div>
+  // Анимационные варианты
+  const containerVariants = {
+    hidden: { opacity: 0, y: 50 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.8,
+        staggerChildren: 0.2
+      }
+    }
+  };
 
-        {/* Картинка мероприятия */}
-        <div 
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        ease: "easeOut"
+      }
+    }
+  };
+
+  const slideVariants = {
+    enter: (direction: string) => ({
+      x: direction === 'left' ? 1000 : -1000,
+      opacity: 0,
+      scale: 0.8,
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+      scale: 1,
+    },
+    exit: (direction: string) => ({
+      x: direction === 'left' ? -1000 : 1000,
+      opacity: 0,
+      scale: 0.8,
+    }),
+  };
+
+  const infoVariants = {
+    enter: (direction: string) => ({
+      x: direction === 'left' ? 500 : -500,
+      opacity: 0,
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+    },
+    exit: (direction: string) => ({
+      x: direction === 'left' ? -500 : 500,
+      opacity: 0,
+    }),
+  };
+
+  return (
+    <motion.div 
+      ref={ref}
+      className="absolute left-[121px] top-[2695px] w-[1681px] h-[897px]"
+      variants={containerVariants}
+      initial="hidden"
+      animate={isInView ? "visible" : "hidden"}
+    >
+      <div className="relative w-full h-full">
+        {/* Фон блока с анимацией */}
+        <motion.div 
+          className="absolute left-0 top-[151px] w-[1681px] h-[746px] bg-[rgba(25,21,52,0.85)] border border-[#2786CA] rounded-[20px] backdrop-blur-sm"
+          variants={itemVariants}
+          whileHover={{ 
+            boxShadow: "0 25px 50px -12px rgba(39, 134, 202, 0.25)",
+            borderColor: "#0184F8",
+            transition: { duration: 0.3 }
+          }}
+        ></motion.div>
+        
+        {/* Заголовок с анимацией */}
+        <motion.div 
+          className="absolute left-[1px] top-0 w-[561px] h-[27px]"
+          variants={itemVariants}
+        >
+          <motion.h2 
+            className="text-white text-[20px] leading-[24.2px] font-inter font-normal uppercase"
+            whileHover={{ 
+              color: "#0184F8",
+              transition: { duration: 0.3 }
+            }}
+          >
+            Мероприятия
+          </motion.h2>
+        </motion.div>
+        
+        {/* Анимированная линия */}
+        <motion.div 
+          className="absolute left-[3px] top-[27.5px] w-[151.5px] h-[1px] bg-white"
+          variants={itemVariants}
+          whileInView={{
+            width: ["0px", "151.5px"],
+            transition: { duration: 1, delay: 0.5 }
+          }}
+        ></motion.div>
+        
+        {/* Подзаголовок с градиентным эффектом */}
+        <motion.div 
+          className="absolute left-0 top-[36px] w-[547px] h-[58px]"
+          variants={itemVariants}
+        >
+          <motion.h1 
+            className="text-white text-[40px] leading-[45.4px] font-franklin font-normal uppercase bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text"
+            whileHover={{
+              backgroundImage: "linear-gradient(45deg, #0184F8, #850191, #0184F8)",
+              transition: { duration: 0.5 }
+            }}
+          >
+            Ближайшие мероприятия
+          </motion.h1>
+        </motion.div>
+
+        {/* Картинка мероприятия с улучшенными анимациями */}
+        <motion.div 
           className="absolute left-[34px] top-[200px] w-[778px] h-[617px] rounded-[31px] border border-[#0D78EE] overflow-hidden"
+          variants={itemVariants}
+          whileHover={{ 
+            scale: 1.02,
+            borderColor: "#0184F8",
+            boxShadow: "0 20px 40px -12px rgba(1, 132, 248, 0.4)",
+            transition: { duration: 0.3 }
+          }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <Image
-            src={currentEvent.image}
-            alt="Event Image"
-            width={778}
-            height={617}
-            className={`w-full h-full object-cover transition-all duration-600 ease-out ${
-              isTransitioning 
-                ? slideDirection === 'left' 
-                  ? 'transform translate-x-[-20px] opacity-70' 
-                  : 'transform translate-x-[20px] opacity-70'
-                : 'transform translate-x-0 opacity-100'
-            }`}
-          />
-          {/* Бейдж */}
-          <div className={`absolute left-[446px] top-[30px] w-[319px] h-[34px] transition-all duration-600 ease-out ${
-            isTransitioning 
-              ? slideDirection === 'left' 
-                ? 'transform translate-x-[-10px] opacity-70' 
-                : 'transform translate-x-[10px] opacity-70'
-              : 'transform translate-x-0 opacity-100'
-          }`}>
-            <div className="w-[305px] h-[34px] bg-gradient-to-r from-[#0283F7] to-[#850191] rounded-[14px] flex items-center justify-center">
-              <span className="text-white text-[18px] font-inter">{currentEvent.badge}</span>
-            </div>
-          </div>
+          <AnimatePresence mode="wait" custom={slideDirection}>
+            <motion.div
+              key={currentSlide}
+              custom={slideDirection}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{
+                x: { type: "spring", stiffness: 300, damping: 30 },
+                opacity: { duration: 0.4 },
+                scale: { duration: 0.4 }
+              }}
+              className="relative w-full h-full"
+            >
+              <Image
+                src={currentEvent.image}
+                alt="Event Image"
+                width={778}
+                height={617}
+                className="w-full h-full object-cover"
+              />
+              
+              {/* Градиентный overlay для лучшей читаемости */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/10"></div>
+              
+              {/* Бейдж с улучшенной анимацией */}
+              <motion.div 
+                className="absolute left-[446px] top-[30px] w-[319px] h-[34px]"
+                initial={{ opacity: 0, y: -20, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: 0.3, duration: 0.5, type: "spring" }}
+              >
+                <motion.div 
+                  className="w-[305px] h-[34px] bg-gradient-to-r from-[#0283F7] to-[#850191] rounded-[14px] flex items-center justify-center backdrop-blur-sm"
+                  whileHover={{
+                    scale: 1.05,
+                    backgroundImage: "linear-gradient(45deg, #0396FF, #9D05A8)",
+                    boxShadow: "0 8px 25px -8px rgba(133, 1, 145, 0.6)",
+                    transition: { duration: 0.3 }
+                  }}
+                >
+                  <motion.span 
+                    className="text-white text-[18px] font-inter"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    {currentEvent.badge}
+                  </motion.span>
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          </AnimatePresence>
 
-          {/* Кнопки навигации на картинке */}
-          <button
+          {/* Кнопки навигации с улучшенными эффектами */}
+          <motion.button
             onClick={handlePrevSlide}
             disabled={isTransitioning}
-            className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-all duration-300 group ${
-              isTransitioning ? 'opacity-50 cursor-not-allowed' : 'opacity-100'
-            }`}
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black/50 rounded-full flex items-center justify-center group backdrop-blur-sm"
+            whileHover={{ 
+              scale: 1.1,
+              backgroundColor: "rgba(0, 0, 0, 0.8)",
+              boxShadow: "0 8px 25px -8px rgba(0, 0, 0, 0.6)"
+            }}
+            whileTap={{ scale: 0.95 }}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.6 }}
           >
-            <svg className="w-6 h-6 text-white group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <motion.svg 
+              className="w-6 h-6 text-white" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+              whileHover={{ x: -2 }}
+              transition={{ type: "spring", stiffness: 400 }}
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
+            </motion.svg>
+          </motion.button>
           
-          <button
+          <motion.button
             onClick={handleNextSlide}
             disabled={isTransitioning}
-            className={`absolute right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-all duration-300 group ${
-              isTransitioning ? 'opacity-50 cursor-not-allowed' : 'opacity-100'
-            }`}
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black/50 rounded-full flex items-center justify-center group backdrop-blur-sm"
+            whileHover={{ 
+              scale: 1.1,
+              backgroundColor: "rgba(0, 0, 0, 0.8)",
+              boxShadow: "0 8px 25px -8px rgba(0, 0, 0, 0.6)"
+            }}
+            whileTap={{ scale: 0.95 }}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.6 }}
           >
-            <svg className="w-6 h-6 text-white group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <motion.svg 
+              className="w-6 h-6 text-white" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+              whileHover={{ x: 2 }}
+              transition={{ type: "spring", stiffness: 400 }}
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
+            </motion.svg>
+          </motion.button>
+        </motion.div>
 
-        {/* Кружочки для навигации */}
-        <div className="absolute left-[773px] top-[847px] w-[113.5px] h-[11px] flex gap-[9px]">
+        {/* Кружочки для навигации с улучшенными анимациями */}
+        <motion.div 
+          className="absolute left-[773px] top-[847px] w-[113.5px] h-[11px] flex gap-[9px]"
+          variants={itemVariants}
+        >
           {events.map((_, index) => (
-            <button
+            <motion.button
               key={index}
               onClick={() => handleDotClick(index)}
               disabled={isTransitioning}
-              className={`w-[12.12px] h-[11px] rounded-full transition-all duration-300 cursor-pointer ${
+              className={`h-[11px] rounded-full cursor-pointer transition-all duration-300 ${
                 index === currentSlide 
                   ? 'bg-white w-[41.88px] rounded-[5.5px]' 
-                  : 'bg-[#757575] hover:bg-white/70'
-              } ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}
+                  : 'bg-[#757575] w-[12.12px]'
+              }`}
+              whileHover={{ 
+                scale: 1.2,
+                backgroundColor: index === currentSlide ? "#0184F8" : "#ffffff",
+                transition: { duration: 0.2 }
+              }}
+              whileTap={{ scale: 0.9 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 + index * 0.1 }}
             />
           ))}
-        </div>
+        </motion.div>
 
-        {/* Кнопки */}
-        <Link 
-          href={`/${locale}/events`}
-          className="group absolute left-[900px] top-[38px] w-[358px] h-[55px] bg-gradient-to-r from-[#0283F7] to-[#850191] rounded-[8px] flex items-center justify-center relative overflow-hidden hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/25 transition-all duration-300"
-        >
-          {/* Градиентный overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0396FF] to-[#9D05A8] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          
-          {/* Блик эффект */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-          
-          <span className="relative z-10 text-white text-[18px] font-inter font-semibold uppercase group-hover:text-shadow-lg transition-all duration-300">Все мероприятия</span>
-        </Link>
+        {/* Кнопки с улучшенными эффектами */}
+        <motion.div variants={itemVariants} className="absolute left-[900px] top-[38px]">
+          <GradientButton 
+            href={`/${locale}/events`}
+            className="w-[358px]"
+          >
+            Все мероприятия
+          </GradientButton>
+        </motion.div>
         
-        <Link 
-          href={`/${locale}/calendar`}
-          className="group absolute left-[1327px] top-[-19px] w-[354px] h-[55px] bg-gradient-to-r from-[#0283F7] to-[#850191] rounded-[8px] flex items-center justify-center relative overflow-hidden hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/25 transition-all duration-300"
-        >
-          {/* Градиентный overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0396FF] to-[#9D05A8] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          
-          {/* Блик эффект */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-          
-          <span className="relative z-10 text-white text-[18px] font-inter font-semibold uppercase group-hover:text-shadow-lg transition-all duration-300">Календарь мероприятий</span>
-        </Link>
+        <motion.div variants={itemVariants} className="absolute left-[1327px] top-[-19px]">
+          <GradientButton 
+            href={`/${locale}/calendar`}
+            className="w-[354px]"
+          >
+            Календарь мероприятий
+          </GradientButton>
+        </motion.div>
 
         {/* Правая часть с информацией */}
-        <div className={`absolute left-[900px] top-[190px] w-[745px] h-[627px] transition-all duration-600 ease-out ${
-          isTransitioning 
-            ? slideDirection === 'left' 
-              ? 'transform translate-x-[20px] opacity-70' 
-              : 'transform translate-x-[-20px] opacity-70'
-            : 'transform translate-x-0 opacity-100'
-        }`}>
-          {/* Заголовок события */}
-          <div className="absolute left-0 top-0 w-[726px] h-[217px]">
-            <h1 className="text-[#0184F8] text-[60px] leading-[68.4px] font-franklin font-normal uppercase">
-              {currentEvent.title}
-            </h1>
-          </div>
-
-          {/* Описание */}
-          <div className="absolute left-[4px] top-[223px] w-[735px] h-[92px]">
-            <p className="text-white text-[15px] leading-[18.15px] font-inter font-normal">
-              {currentEvent.description}
-            </p>
-          </div>
-
-          {/* Скидка */}
-          <div className="absolute left-[4px] top-[299px] w-[169px] h-[57px]">
-            <span className="text-white text-[30px] leading-[34px] font-franklin font-normal uppercase">Скидка</span>
-          </div>
-          <div className="absolute left-[94px] top-[335px] w-[208px] h-[128px]">
-            <span className="text-[110px] leading-[125px] font-franklin font-normal uppercase bg-gradient-to-br from-[#0B7BF1] to-[#850191] bg-clip-text text-transparent">{currentEvent.discount}</span>
-          </div>
-          <div className="absolute left-[345px] top-[300px] w-[400px] h-[57px]">
-            <span className="text-white text-[30px] leading-[34px] font-franklin font-normal uppercase">{currentEvent.discountText}</span>
-          </div>
-
-          {/* Таймер */}
-          <div className="absolute left-[348px] top-[357px] w-[392px] h-[98px]">
-            <div className="flex gap-[14px]">
-              <div className="w-[87px] h-[75px] bg-[#3F3F3F] rounded-[8px] flex flex-col items-center justify-center">
-                <span className="text-white text-[40px] font-franklin">{currentEvent.days.toString().padStart(2, '0')}</span>
-                <span className="text-white text-[12px] font-inter">Дней</span>
-              </div>
-              <div className="w-[86px] h-[75px] bg-[#3F3F3F] rounded-[8px] flex flex-col items-center justify-center">
-                <span className="text-white text-[40px] font-franklin">{currentEvent.hours.toString().padStart(2, '0')}</span>
-                <span className="text-white text-[12px] font-inter">Часов</span>
-              </div>
-              <div className="w-[86px] h-[75px] bg-[#3F3F3F] rounded-[8px] flex flex-col items-center justify-center">
-                <span className="text-white text-[40px] font-franklin">{currentEvent.minutes.toString().padStart(2, '0')}</span>
-                <span className="text-white text-[12px] font-inter">Минут</span>
-              </div>
-              <div className="w-[87px] h-[75px] bg-[#3F3F3F] rounded-[8px] flex flex-col items-center justify-center">
-                <span className="text-white text-[40px] font-franklin">{currentEvent.seconds.toString().padStart(2, '0')}</span>
-                <span className="text-white text-[12px] font-inter">Секунд</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Детали события */}
-          <div className="absolute left-[4px] top-[478px] w-[712px] h-[64px] space-y-[18px]">
-            <div className="flex items-center gap-[30px]">
-              <span className="text-white text-[12px] font-inter">📅</span>
-              <span className="text-white text-[12px] font-inter">{currentEvent.date}</span>
-              <span className="text-white text-[12px] font-inter">⏰</span>
-              <span className="text-white text-[12px] font-inter">{currentEvent.time}</span>
-            </div>
-            <div className="flex items-center gap-[30px]">
-              <span className="text-white text-[12px] font-inter">📍</span>
-              <span className="text-white text-[12px] font-inter">{currentEvent.location}</span>
-              <span className="text-white text-[12px] font-inter">💬</span>
-              <span className="text-white text-[12px] font-inter">{currentEvent.language}</span>
-            </div>
-            <div className="flex items-center gap-[30px]">
-              <span className="text-white text-[12px] font-inter">💳</span>
-              <span className="text-white text-[12px] font-inter">{currentEvent.price}</span>
-            </div>
-          </div>
-
-          {/* Кнопка регистрации */}
-          <Link 
-            href={`/${locale}/register`}
-            className="group absolute left-[6px] top-[573px] w-[727px] h-[54px] bg-gradient-to-r from-[#0283F7] to-[#850191] rounded-[8px] flex items-center justify-center relative overflow-hidden hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/30 transition-all duration-300"
+        <AnimatePresence mode="wait" custom={slideDirection}>
+          <motion.div
+            key={`info-${currentSlide}`}
+            custom={slideDirection}
+            variants={infoVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{
+              type: "spring",
+              stiffness: 300,
+              damping: 30,
+              staggerChildren: 0.1
+            }}
+            className="absolute left-[900px] top-[190px] w-[745px] h-[627px]"
           >
-            {/* Градиентный overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#0396FF] to-[#9D05A8] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            {/* Заголовок события */}
+            <motion.div 
+              className="absolute left-0 top-0 w-[726px] h-[217px]"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <motion.h1 
+                className="text-[#0184F8] text-[60px] leading-[68.4px] font-franklin font-normal uppercase bg-gradient-to-r from-[#0184F8] to-[#850191] bg-clip-text text-transparent"
+                whileHover={{
+                  scale: 1.02,
+                  backgroundImage: "linear-gradient(45deg, #0396FF, #9D05A8)",
+                  transition: { duration: 0.3 }
+                }}
+              >
+                {currentEvent.title}
+              </motion.h1>
+            </motion.div>
+
+            {/* Описание */}
+            <motion.div 
+              className="absolute left-[4px] top-[223px] w-[735px] h-[92px]"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <p className="text-white text-[15px] leading-[18.15px] font-inter font-normal">
+                {currentEvent.description}
+              </p>
+            </motion.div>
+
+            {/* Скидка с анимированным счетчиком */}
+            <motion.div 
+              className="absolute left-[4px] top-[299px] w-[169px] h-[57px]"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <span className="text-white text-[30px] leading-[34px] font-franklin font-normal uppercase">Скидка</span>
+            </motion.div>
             
-            {/* Блик эффект */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+            <motion.div 
+              className="absolute left-[94px] top-[335px] w-[208px] h-[128px]"
+              initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              transition={{ 
+                delay: 0.5,
+                type: "spring",
+                stiffness: 300,
+                damping: 15
+              }}
+              whileHover={{
+                scale: 1.1,
+                rotate: 5,
+                transition: { duration: 0.3 }
+              }}
+            >
+              <span className="text-[110px] leading-[125px] font-franklin font-normal uppercase bg-gradient-to-br from-[#0B7BF1] to-[#850191] bg-clip-text text-transparent">
+                {currentEvent.discount}
+              </span>
+            </motion.div>
             
-            <span className="relative z-10 text-white text-[20px] font-inter font-bold uppercase group-hover:text-shadow-lg transition-all duration-300">Зарегистрироваться</span>
-          </Link>
-        </div>
+            <motion.div 
+              className="absolute left-[345px] top-[300px] w-[400px] h-[57px]"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              <span className="text-white text-[30px] leading-[34px] font-franklin font-normal uppercase">{currentEvent.discountText}</span>
+            </motion.div>
+
+            {/* Таймер с анимацией flip */}
+            <motion.div 
+              className="absolute left-[348px] top-[357px] w-[392px] h-[98px]"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+            >
+              <div className="flex gap-[14px]">
+                <AnimatedCounter 
+                  value={currentEvent.days} 
+                  label="Дней" 
+                  delay={0.8}
+                />
+                <AnimatedCounter 
+                  value={currentEvent.hours} 
+                  label="Часов" 
+                  delay={0.9}
+                  className="w-[86px] h-[75px]"
+                />
+                <AnimatedCounter 
+                  value={currentEvent.minutes} 
+                  label="Минут" 
+                  delay={1.0}
+                  className="w-[86px] h-[75px]"
+                />
+                <AnimatedCounter 
+                  value={currentEvent.seconds} 
+                  label="Секунд" 
+                  delay={1.1}
+                />
+              </div>
+            </motion.div>
+
+            {/* Детали события */}
+            <motion.div 
+              className="absolute left-[4px] top-[478px] w-[712px] h-[64px] space-y-[18px]"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.9 }}
+            >
+              <motion.div 
+                className="flex items-center gap-[30px]"
+                whileHover={{ x: 10 }}
+                transition={{ type: "spring", stiffness: 400 }}
+              >
+                <span className="text-white text-[12px] font-inter">📅</span>
+                <span className="text-white text-[12px] font-inter">{currentEvent.date}</span>
+                <span className="text-white text-[12px] font-inter">⏰</span>
+                <span className="text-white text-[12px] font-inter">{currentEvent.time}</span>
+              </motion.div>
+              <motion.div 
+                className="flex items-center gap-[30px]"
+                whileHover={{ x: 10 }}
+                transition={{ type: "spring", stiffness: 400 }}
+              >
+                <span className="text-white text-[12px] font-inter">📍</span>
+                <span className="text-white text-[12px] font-inter">{currentEvent.location}</span>
+                <span className="text-white text-[12px] font-inter">💬</span>
+                <span className="text-white text-[12px] font-inter">{currentEvent.language}</span>
+              </motion.div>
+              <motion.div 
+                className="flex items-center gap-[30px]"
+                whileHover={{ x: 10 }}
+                transition={{ type: "spring", stiffness: 400 }}
+              >
+                <span className="text-white text-[12px] font-inter">💳</span>
+                <span className="text-white text-[12px] font-inter">{currentEvent.price}</span>
+              </motion.div>
+            </motion.div>
+
+            {/* Кнопка регистрации */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1 }}
+              className="absolute left-[6px] top-[573px]"
+            >
+              <GradientButton 
+                href={`/${locale}/register`}
+                className="w-[727px]"
+                size="lg"
+              >
+                Зарегистрироваться
+              </GradientButton>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
